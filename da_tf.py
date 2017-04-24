@@ -7,6 +7,7 @@ Created on Apr 22, 2017
 
 import tensorflow as tf
 import numpy as np
+import cv2
 import time
 
 def get_batch(X, Xn, size):
@@ -35,25 +36,33 @@ class Denoiser:
         self.train_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss)
         self.saver = tf.train.Saver()
 
-    def add_noise(self, data):
+    def add_noise(self, data, mean, sigma):
         noise_type = 'gaussian'
+        noisy_patches = []
+        i = 1
         if noise_type == 'gaussian':
-            print "shape of data = ", np.shape(data)
-            n = np.random.normal(0, 0.1, np.shape(data))
-            return data + n
-        if 'mask' in noise_type:
-            frac = float(noise_type.split('-')[1])
-            temp = np.copy(data)
-            for i in temp:
-                n = np.random.choice(len(i), round(frac * len(i)), replace=False)
-                i[n] = 0
-            return temp
+            for patch in data:
+                print "On ",i,"/",len(data),"\r",
+                i += 1
+                n = np.random.normal(mean, sigma, np.shape(patch))
+                added = patch + n
+                cv2.normalize(added, added, 0, 255, cv2.NORM_MINMAX, dtype=cv2.CV_32FC3 )    
+#                 noisy_patches.append(added)
+                if len(noisy_patches) > 0:     
+                    noisy_patches = np.vstack((noisy_patches, added))    
+                else:
+                    noisy_patches = added
+            
+            noisy_patches = np.matrix(noisy_patches)  
+            return noisy_patches
 
     def train(self, data):
-        data_noised = self.add_noise(data)
+        print "Adding Noise!"
+        data_noised = self.add_noise(data, 0, 10)
         with open('log.csv', 'w') as writer:
             with tf.Session() as sess:
                 sess.run(tf.global_variables_initializer())
+                print "Training to denoise"
                 for i in range(self.epoch):
                     for j in range(50):
                         batch_data, batch_data_noised = get_batch(data, data_noised, self.batch_size)

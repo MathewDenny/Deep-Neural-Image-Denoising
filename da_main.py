@@ -36,6 +36,7 @@ g_sigma25 = (25.0,25.0,25.0)
 g_sigma35 = (35.0,35.0,35.0)
 g_sigma45 = (45.0,45.0,45.0)
 g_sigma50 = (50.0,50.0,50.0)
+g_shape = (64,64)
 
 path = "/home/denny/NYU/IMAGE/imagedata/all"
 
@@ -63,7 +64,7 @@ def create_noisy_patches(patches):
     return len, noisy_patches
 
     
-def create_dataset_patches(images, patchshape, patch_shift=4):
+def create_dataset_patches(image, patchshape, patch_shift=4):
     """
     Given an image list, extract patches of a given shape Patch shift
     is the certain shift amount for the successive patch location
@@ -71,27 +72,33 @@ def create_dataset_patches(images, patchshape, patch_shift=4):
     rowstart = 0; colstart = 0
  
     patches = []
-    for active in images:
-        rowstart = 0  
-        while rowstart < active.shape[0] - patchshape[0]:
+    active = image
+    rowstart = 0 
+     
+    while rowstart < active.shape[0] - patchshape[0]:
+         
+        colstart = 0       
+        while colstart < active.shape[1] - patchshape[1]:
+            # Slice tuple indexing the region of our proposed patch
+            region = (slice(rowstart, rowstart + patchshape[0]),
+                      slice(colstart, colstart + patchshape[1]))
              
-            colstart = 0       
-            while colstart < active.shape[1] - patchshape[1]:
-                # Slice tuple indexing the region of our proposed patch
-                region = (slice(rowstart, rowstart + patchshape[0]),
-                          slice(colstart, colstart + patchshape[1]))
-                 
-                # The actual pixels in that region.
-                patch = active[region]
+            # The actual pixels in that region.
+            patch = active[region]
+            # Accept the patch.
+            patch_vector = patch.flatten()
+            if len(patches) > 0:            
+                patches = np.vstack((patches, patch_vector))            
+            else:
+                patches = patch_vector
                 
-                # Accept the patch.
-                patches.append(patch)
-                colstart += patch_shift
-     
-             
-            rowstart += patch_shift
+#             patches.append(patch)
+            colstart += patch_shift
+            
+         
+        rowstart += patch_shift
  
-     
+    patches = np.matrix(patches)
     return patches
     
 def plot_patches(patches, fignum=None, low=0, high=0):
@@ -155,13 +162,14 @@ def load_images_from_folder(folder):
 #                                    dst = norm_image, 
 #                                    norm_type=cv2.NORM_MINMAX, 
 #                                    dtype=cv2.CV_32F)
-        
-        image_vector = norm_image.flatten()
+        patches = create_dataset_patches(norm_image, g_shape, patch_shift=32)
+        num_patches = len(patches)
+#         print "no of patches made:", num_patches, patches.shape
+
         if len(imgs) > 0:            
-            imgs = np.vstack((imgs, image_vector))            
-            
+            imgs = np.vstack((imgs, patches))            
         else:
-            imgs = image_vector
+            imgs = patches
             
         
 #         imgs.append(image_vector)
@@ -170,31 +178,9 @@ def load_images_from_folder(folder):
     return imgs
 
 def main():
-
-#     hidden_dim = 1
-#     data = datasets.load_iris().data
-#     input_dim = len(data[0])
-#     ae = da_tf.Autoencoder(input_dim, hidden_dim)
-#     ae.train(data)
-#     ae.test([[8, 4, 6, 2]])
-    
-    
-    
-#     names = unpickle('./cifar-10-batches-py/batches.meta')['label_names']
-#     data, labels = [], []
-#     for i in range(1, 6):
-#         filename = './cifar-10-batches-py/data_batch_' + str(i)
-#         batch_data = unpickle(filename)
-#         if len(data) > 0:
-#             data = np.vstack((data, batch_data['data']))
-#             labels = np.hstack((labels, batch_data['labels']))
-#         else:
-#             data = batch_data['data']
-#             labels = batch_data['labels']
-#     
-#     data = grayscale(data)
     
     images = load_images_from_folder(path)
+    print "no of images made:", len(images), images.shape
     print "shape of input images = ", images.shape
 #     data = grayscale(images)
 #     
@@ -202,20 +188,18 @@ def main():
      
       
     print('Some examples of images we will feed to the autoencoder for training')
-#     plt.rcParams['figure.figsize'] = (10, 10)
-#     num_examples = 5
-#     global g_r; global g_c
-#     for i in range(num_examples):
-#         in_image = np.reshape(images[i], (g_r, g_c))
-#         print in_image.shape
-#         plt.subplot(1, num_examples, i+1)
-#         plt.imshow(in_image, cmap='Greys_r')
-#     plt.show()
-    print "our data = " , images
+    plt.rcParams['figure.figsize'] = (10, 10)
+    num_examples = 5
+    global g_r; global g_c
+    for i in range(num_examples):
+        in_image = np.reshape(images[i], g_shape)
+        print in_image.shape
+        plt.subplot(1, num_examples, i+1)
+        plt.imshow(in_image, cmap='Greys_r')
+    plt.show()
   
     input_dim = np.shape(images)[1]
     print "our input_dim = " , input_dim
-
     hidden_dim = 100
     ae = da_tf.Denoiser(input_dim, hidden_dim)
     ae.train(images)
