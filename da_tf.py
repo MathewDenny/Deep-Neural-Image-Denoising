@@ -22,7 +22,7 @@ def get_batch(X, Xn, size):
 
 class Denoiser:
 
-    def __init__(self, input_dim, hidden_dim, epoch=1500, batch_size=10, learning_rate=0.001):
+    def __init__(self, input_dim, hidden_dim, epoch=2000, batch_size=15, learning_rate=0.001):
         hidden_dim2 = 5 * hidden_dim
         self.epoch = epoch
         self.batch_size = batch_size
@@ -159,58 +159,62 @@ class Denoiser:
             noisy_patches = np.matrix(noisy_patches, dtype = np.float32)  
             return noisy_patches
 
-    def train(self, data):
+    def train(self, data, sigmas):
         print "Adding Noise!"
-        data_noised = self.add_noise(data, 0, 0.01)
         with open('log.csv', 'w') as writer:
             with tf.Session() as sess:
                 sess.run(tf.global_variables_initializer())
-                print "Training layer 1"
-                for i in range(self.epoch):
-                    for j in range(50):
-                        batch_data, batch_data_noised = get_batch(data, data_noised, self.batch_size)
-                        l, _ = sess.run([self.loss1, self.train_op1], feed_dict={self.x: batch_data, self.x_noised: batch_data_noised})
-                    if i % 10 == 0:
-                        print('epoch {0}: loss = {1}'.format(i, l))
-                        v = sess.run(self.d_weights2)
-                        print('self.d_weights2', v)
 
-                        self.saver.save(sess, './model.ckpt')
-                        epoch_time = int(time.time())
-                        row_str = str(epoch_time) + ',' + str(i) + ',' + str(l) + '\n'
-                        writer.write(row_str)
-                        writer.flush()
-                #self.saver.save(sess, './model_da1.ckpt')
-                print "Training layer 2 (inner)"
-                for i in range(self.epoch):
-                    for j in range(50):
-                        batch_data, batch_data_noised = get_batch(data, data_noised, self.batch_size)
-                        l, _ = sess.run([self.loss2, self.train_op2], feed_dict={self.x: batch_data, self.x_noised: batch_data_noised})
-                    if i % 10 == 0:
-                        print('epoch {0}: loss = {1}'.format(i, l))
-                        v = sess.run(self.d_weights1)
-                        print('self.d_weights1', v)
-
-                        self.saver.save(sess, './model.ckpt')
-                        epoch_time = int(time.time())
-                        row_str = str(epoch_time) + ',' + str(i) + ',' + str(l) + '\n'
-                        writer.write(row_str)
-                        writer.flush()
-                print "Training Deep network"
-                for i in range(self.epoch):
-                    for j in range(50):
-                        batch_data, batch_data_noised = get_batch(data, data_noised, self.batch_size)
-                        l, _ = sess.run([self.loss3, self.train_op3], feed_dict={self.x: batch_data, self.x_noised: batch_data_noised})
-                    if i % 10 == 0:
-                        print('epoch {0}: loss = {1}'.format(i, l))
-                        v = sess.run(self.d_weights1)
-                        print('self.d_weights1', v)
-
-                        self.saver.save(sess, './model.ckpt')
-                        epoch_time = int(time.time())
-                        row_str = str(epoch_time) + ',' + str(i) + ',' + str(l) + '\n'
-                        writer.write(row_str)
-                        writer.flush()
+                for noise_level in range(len(sigmas)):
+                    print "Training with noise level ", sigmas[noise_level]
+                    data_noised = self.add_noise(data, 0, sigmas[noise_level])
+    
+                    print "Training layer 1"
+                    for i in range(self.epoch):
+                        for j in range(50):
+                            batch_data, batch_data_noised = get_batch(data, data_noised, self.batch_size)
+                            l, _ = sess.run([self.loss1, self.train_op1], feed_dict={self.x: batch_data, self.x_noised: batch_data_noised})
+                        if i % 200 == 0:
+                            print('epoch {0}: loss = {1}'.format(i, l))
+                            #v = sess.run(self.d_weights2)
+                            #print('self.d_weights2', v)
+    
+                            self.saver.save(sess, './model.ckpt')
+                            epoch_time = int(time.time())
+                            row_str = str(epoch_time) + ',' + str(i) + ',' + str(l) + '\n'
+                            writer.write(row_str)
+                            writer.flush()
+                    #self.saver.save(sess, './model_da1.ckpt')
+                    print "Training layer 2 (inner)"
+                    for i in range(self.epoch):
+                        for j in range(50):
+                            batch_data, batch_data_noised = get_batch(data, data_noised, self.batch_size)
+                            l, _ = sess.run([self.loss2, self.train_op2], feed_dict={self.x: batch_data, self.x_noised: batch_data_noised})
+                        if i % 200 == 0:
+                            print('epoch {0}: loss = {1}'.format(i, l))
+                            #v = sess.run(self.d_weights1)
+                            #print('self.d_weights1', v)
+    
+                            self.saver.save(sess, './model.ckpt')
+                            epoch_time = int(time.time())
+                            row_str = str(epoch_time) + ',' + str(i) + ',' + str(l) + '\n'
+                            writer.write(row_str)
+                            writer.flush()
+                    print "Training Deep network"
+                    for i in range(self.epoch):
+                        for j in range(50):
+                            batch_data, batch_data_noised = get_batch(data, data_noised, self.batch_size)
+                            l, _ = sess.run([self.loss3, self.train_op3], feed_dict={self.x: batch_data, self.x_noised: batch_data_noised})
+                        if i % 200 == 0:
+                            print('epoch {0}: loss = {1}'.format(i, l))
+                            #v = sess.run(self.d_weights1)
+                            #print('self.d_weights1', v)
+    
+                            self.saver.save(sess, './model.ckpt')
+                            epoch_time = int(time.time())
+                            row_str = str(epoch_time) + ',' + str(i) + ',' + str(l) + '\n'
+                            writer.write(row_str)
+                            writer.flush()
                 self.saver.save(sess, './model_da2.ckpt')
 
     def test(self, data):

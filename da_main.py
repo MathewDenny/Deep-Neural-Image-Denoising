@@ -42,6 +42,7 @@ g_shape = (32,32)
 g_imgs_set = [] 
 
 path = "/home/denny/NYU/IMAGE/imagedata/all"
+testimg_path = "/home/denny/NYU/IMAGE/imagedata/test"
 
 def reconstruct_patches(input_patches, patch_shape):
     """ Creates an image from the patches
@@ -49,7 +50,7 @@ def reconstruct_patches(input_patches, patch_shape):
     i = 0
     window_size_r = patch_shape[0]
     window_size_c = patch_shape[1]
-    new_image = np.zeros((g_r,g_c))
+    new_image = np.ones((g_r,g_c))
     print input_patches.shape
     for r in range(0,new_image.shape[0], window_size_r):
 #         print "r value = ", r, window_size_r
@@ -154,14 +155,15 @@ def load_images_from_folder(folder):
     """
     imgs = []
     valid_images = [".jpg",".pbm",".png",".ppm"]
-    for f in os.listdir(path):
+#     del g_imgs_set[:]
+    for f in os.listdir(folder):
         ext = os.path.splitext(f)[1]
         if ext.lower() not in valid_images:
             print "NOTE: ", f, " avoided from dataset"
             continue
 #         imgs.append(Image.open(os.path.join(path,f)))
         
-        image = cv2.imread(os.path.join(path,f), cv2.IMREAD_COLOR )
+        image = cv2.imread(os.path.join(folder,f), cv2.IMREAD_COLOR )
         
         # swap to RGB format
         red = image[:,:,2].copy()
@@ -199,32 +201,44 @@ def load_images_from_folder(folder):
 
 def main():
     
-    images = load_images_from_folder(path)
-    print "no of images made:", len(images), images.shape
-    print "shape of input images = ", images.shape
+#     images = load_images_from_folder(path)
+#     print "no of images made:", len(images), images.shape
+#     print "shape of input images = ", images.shape
 #     data = grayscale(images)
 #     
 #     x = np.matrix(data)
      
      
-    print('Some examples of images we will feed to the autoencoder for training')
-    plt.rcParams['figure.figsize'] = (10, 10)
-    num_examples = 5
-    global g_r; global g_c
-    for i in range(num_examples):
-        in_image = np.reshape(images[i], g_shape)
-        print in_image.shape
-        plt.subplot(1, num_examples, i+1)
-        plt.imshow(in_image, cmap='Greys_r')
-    plt.show()
-  
-    input_dim = np.shape(images)[1]
-    print "our input_dim = " , input_dim
-    hidden_dim = 100
-    ae = da_tf.Denoiser(input_dim, hidden_dim)
-    ae.train(images)
+#     print('Some examples of images we will feed to the autoencoder for training')
+#     plt.rcParams['figure.figsize'] = (10, 10)
+#     num_examples = 5
+#     global g_r; global g_c
+#     for i in range(num_examples):
+#         in_image = np.reshape(images[i], g_shape)
+#         print in_image.shape
+#         plt.subplot(1, num_examples, i+1)
+#         plt.imshow(in_image, cmap='Greys_r')
+#     plt.show()
+#   
+#     input_dim = np.shape(images)[1]
+#     print "our input_dim = " , input_dim
+#     hidden_dim = 100
+#     ae = da_tf.Denoiser(input_dim, hidden_dim)
+    #ae.train(images, [0.019, 0.058, 0.098, 0.137])
     
-    data_noised = ae.add_noise([g_imgs_set[0], g_imgs_set[1]], 0, 0.01)
+    
+    #TESTING IMAGES
+    num_examples = 4
+    hidden_dim = 100
+    images = load_images_from_folder(testimg_path)
+    
+    input_dim = np.shape(images)[1]
+    ae = da_tf.Denoiser(input_dim, hidden_dim)    
+    
+    print "no of images made:", len(images), images.shape
+    print "shape of input images = ", images.shape
+    
+    data_noised = ae.add_noise([g_imgs_set[0], g_imgs_set[1]], 0, 0.12)
     print data_noised.shape
     for i in range(2):
         in_image = np.reshape(data_noised[i], (g_r, g_c))
